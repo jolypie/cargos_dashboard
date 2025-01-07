@@ -1,0 +1,115 @@
+﻿@page "/edit-airplane"
+@page "/edit-airplane/{AirplaneId:int}"
+@inject IAirplaneService AirplaneService
+@inject IWarehouseService WarehouseService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+@if (AirplaneId is null)
+{
+    <PageTitle>Add a New Airplane</PageTitle>
+    <h3>Add a New Airplane</h3>
+}
+else if (CurrentAirplane is not null)
+{
+    <PageTitle>Edit "@CurrentAirplane.AirplaneCode"</PageTitle>
+    <h3>Edit "@CurrentAirplane.AirplaneCode"</h3>
+}
+else
+{
+    <h3>Loading...</h3>
+}
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger">
+        @ErrorMessage
+    </div>
+}
+
+<EditForm Model="CurrentAirplane" OnSubmit="HandleSubmit">
+    <div>
+        <label for="code">Code</label>
+        <InputText id="code" @bind-Value="CurrentAirplane.AirplaneCode" class="form-control" />
+    </div>
+    <div class="mt-3">
+        <label for="maxload">Max Load</label>
+        <InputNumber id="maxload" @bind-Value="CurrentAirplane.MaxLoad" class="form-control" />
+    </div>
+    <div class="mt-3">
+        <label for="warehouse">Warehouse</label>
+        <InputSelect id="warehouse" @bind-Value="CurrentAirplane.WarehouseId" class="form-control">
+            <option value="">-- Select a Warehouse --</option>
+            @foreach (var warehouse in Warehouses)
+            {
+                <option value="@warehouse.WarehouseId">@warehouse.WarehouseCode | @warehouse.Location</option>
+            }
+        </InputSelect>
+    </div>
+    <div class="mt-3">
+        <button type="submit" class="btn btn-success">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public int? AirplaneId { get; set; }
+    public Airplane CurrentAirplane { get; set; } = new();
+    public List<Warehouse> Warehouses { get; set; } = new();
+    public string ErrorMessage { get; set; } = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            Warehouses = await WarehouseService.GetAllWarehousesAsync();
+
+            if (AirplaneId is not null)
+            {
+                var airplane = await AirplaneService.GetAirplaneByIdAsync((int)AirplaneId);
+                if (airplane is not null)
+                {
+                    CurrentAirplane = airplane;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    async Task HandleSubmit()
+    {
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(CurrentAirplane.AirplaneCode))
+            {
+                ErrorMessage = "Airplane code is required.";
+                return;
+            }
+
+            if (AirplaneId is not null)
+            {
+                await AirplaneService.UpdateAirplaneAsync(CurrentAirplane, (int)AirplaneId);
+            }
+            else
+            {
+                await AirplaneService.AddAirplaneAsync(CurrentAirplane);
+            }
+
+            NavigationManager.NavigateTo("/airplanes");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    void Cancel()
+    {
+        NavigationManager.NavigateTo("/airplanes");
+    }
+}

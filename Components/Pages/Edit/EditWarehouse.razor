@@ -1,0 +1,130 @@
+﻿@page "/edit-warehouse"
+@page "/edit-warehouse/{WarehouseId:int}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@inject IWarehouseService WarehouseService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+@if (WarehouseId is null)
+{
+    <PageTitle>Add a New Warehouse</PageTitle>
+    <h3>Add a New Warehouse</h3>
+}
+else if (CurrentWarehouse is not null)
+{
+    <PageTitle>Edit "@CurrentWarehouse.WarehouseCode"</PageTitle>
+    <h3>Edit "@CurrentWarehouse.WarehouseCode"</h3>
+}
+else
+{
+    <h3>Loading...</h3>
+}
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @ErrorMessage
+    </div>
+}
+
+<EditForm Model="CurrentWarehouse" OnSubmit="HandleSubmit">
+    <div class="mb-3">
+        <label for="code" class="form-label">Warehouse Code</label>
+        <InputText id="code" @bind-Value="CurrentWarehouse.WarehouseCode" class="form-control"/>
+    </div>
+    <div class="mb-3">
+        <label for="city" class="form-label">City</label>
+        <InputText id="city" @bind-Value="CurrentWarehouse.Location" class="form-control"/>
+    </div>
+    <div class="mt-3">
+        <button type="submit" class="btn btn-success">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public int? WarehouseId { get; set; }
+
+    public Warehouse CurrentWarehouse { get; set; } = new();
+    public string ErrorMessage { get; set; } = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (WarehouseId is not null)
+        {
+            try
+            {
+                var warehouse = await WarehouseService.GetWarehouseByIdAsync((int)WarehouseId);
+                if (warehouse is not null)
+                {
+                    CurrentWarehouse = warehouse;
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+            }
+        }
+    }
+
+    async Task HandleSubmit()
+    {
+        try
+        {
+            ErrorMessage = string.Empty;
+
+            // Client-side validation
+            if (string.IsNullOrWhiteSpace(CurrentWarehouse.WarehouseCode))
+            {
+                ErrorMessage = "Warehouse code is required.";
+                return;
+            }
+
+            if (CurrentWarehouse.WarehouseCode.Length > 5)
+            {
+                ErrorMessage = "Warehouse code must not exceed 5 characters.";
+                return;
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(CurrentWarehouse.WarehouseCode, "^[A-Za-z0-9]+$"))
+            {
+                ErrorMessage = "Warehouse code can only contain alphanumeric characters.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(CurrentWarehouse.Location))
+            {
+                ErrorMessage = "Location is required.";
+                return;
+            }
+
+            if (CurrentWarehouse.Location.Length > 100)
+            {
+                ErrorMessage = "Location must not exceed 100 characters.";
+                return;
+            }
+
+            if (WarehouseId is not null)
+            {
+                await WarehouseService.UpdateWarehouseAsync(CurrentWarehouse, (int)WarehouseId);
+            }
+            else
+            {
+                await WarehouseService.AddWarehouseAsync(CurrentWarehouse);
+            }
+
+            NavigationManager.NavigateTo("/warehouses");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    void Cancel()
+    {
+        NavigationManager.NavigateTo("/warehouses", forceLoad: true);
+    }
+
+}

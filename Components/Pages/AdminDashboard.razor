@@ -1,0 +1,77 @@
+﻿@page "/dashboard"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager NavigationManager
+@inject IWarehouseService WarehouseService
+@inject IAirplaneService AirplaneService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@attribute [Authorize(Roles = "Admin")]
+
+
+<PageTitle>Dashboard</PageTitle>
+<h1 class="my-4">Admin Dashboard</h1>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Users</h5>
+                    <p class="card-text">@TotalUsers</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Warehouses</h5>
+                    <p class="card-text">@TotalWarehouses</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Airplanes</h5>
+                    <p class="card-text">@TotalAirplanes</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Cargos in Warehouses</h5>
+                    <p class="card-text">@TotalCargosInWarehouses</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mt-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Cargos in Airplanes</h5>
+                    <p class="card-text">@TotalCargosInAirplanes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int TotalUsers { get; set; }
+    private int TotalWarehouses { get; set; }
+    private int TotalAirplanes { get; set; }
+    private int TotalCargosInWarehouses { get; set; }
+    private int TotalCargosInAirplanes { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var warehouses = await WarehouseService.GetAllWarehousesAsync();
+        TotalWarehouses = warehouses.Count;
+
+        var airplanes = await AirplaneService.GetAllAirplanesAsync();
+        TotalAirplanes = airplanes.Count;
+        
+    }
+}
